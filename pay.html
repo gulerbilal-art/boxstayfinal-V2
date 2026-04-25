@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+<title>Box Surprise — Paiement</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,300;0,400;1,300&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://js.stripe.com/v3/"></script>
+<style>
+:root{
+  --bg:#080706;--surface:#100F0D;--card:#161412;
+  --border:#242018;--gold:#BF9B4A;--gold-dim:#6B5520;
+  --text:#EAE0CC;--muted:#5C554A;--muted2:#3A342C;
+  --green:#1A6B3C;--green-bg:#0A1810;--green-lt:#3CAF6A;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);min-height:100%}
+body{color:var(--text);font-family:'Jost',sans-serif;font-weight:300;-webkit-font-smoothing:antialiased;display:flex;flex-direction:column;align-items:center}
+
+header{width:100%;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:10}
+.logo{font-family:'Playfair Display',serif;font-size:17px;letter-spacing:3px;text-transform:uppercase;color:var(--gold)}
+.ssl{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2)}
+
+.scr{display:none;width:100%;max-width:400px;padding:28px 16px 64px;flex-direction:column;align-items:center}
+.scr.on{display:flex;animation:up .45s ease both}
+@keyframes up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+.price-box{width:100%;background:var(--card);border:1px solid var(--border);border-top:2px solid var(--gold-dim);padding:26px 20px;margin-bottom:18px;text-align:center}
+.price-label{font-size:9px;letter-spacing:4px;text-transform:uppercase;color:var(--gold-dim);margin-bottom:12px}
+.price-amount{font-family:'Playfair Display',serif;font-size:72px;font-weight:300;color:var(--gold);line-height:1;margin-bottom:6px}
+.price-desc{font-size:13px;color:var(--muted)}
+
+.form-box{width:100%;background:var(--card);border:1px solid var(--border);padding:22px;margin-bottom:8px}
+.fsection{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--gold-dim);display:block;margin-bottom:16px}
+.field{margin-bottom:20px}.field:last-child{margin-bottom:0}
+.field label{display:block;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:9px}
+.field input{width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-family:'Jost',sans-serif;font-size:16px;font-weight:300;padding:8px 0;outline:none;transition:border-color .2s;-webkit-appearance:none}
+.field input:focus{border-bottom-color:var(--gold)}
+.field input::placeholder{color:var(--muted2)}
+.sep{border:none;border-top:1px solid var(--border);margin:18px 0}
+
+#card-el{padding:10px 0 8px;border-bottom:1px solid var(--border);transition:border-color .2s}
+#card-el.StripeElement--focus{border-bottom-color:var(--gold)}
+#card-el.StripeElement--invalid{border-bottom-color:#8B3030}
+#card-err{font-size:12px;color:#A04040;min-height:18px;margin-top:8px;text-align:center}
+
+.pay-btn{width:100%;padding:17px;background:var(--gold);color:var(--bg);font-family:'Jost',sans-serif;font-size:11px;font-weight:600;letter-spacing:4px;text-transform:uppercase;border:none;cursor:pointer;transition:opacity .2s;margin-top:4px}
+.pay-btn:hover:not(:disabled){opacity:.88}
+.pay-btn:disabled{opacity:.3;cursor:not-allowed}
+.secure{font-size:11px;color:var(--muted2);text-align:center;margin-top:12px;letter-spacing:.4px}
+
+#scr-proc{text-align:center;gap:24px}
+.spinner{width:56px;height:56px;border:1.5px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .85s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.proc-title{font-family:'Playfair Display',serif;font-size:20px;font-style:italic;font-weight:300}
+.proc-steps{width:100%;display:flex;flex-direction:column;gap:8px}
+.pstep{display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--card);border:1px solid var(--border);font-size:13px;color:var(--muted2);transition:all .35s}
+.pstep.live{color:var(--text);border-color:var(--gold-dim)}
+.pstep.done{color:var(--green-lt);border-color:rgba(26,107,60,.3);background:var(--green-bg)}
+.pstep-ico{width:22px;text-align:center;font-size:14px;flex-shrink:0}
+
+#scr-code{text-align:center;gap:0}
+.check-ring{width:72px;height:72px;border:1px solid var(--green);border-radius:50%;display:grid;place-items:center;margin:0 auto 26px;animation:pop .6s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes pop{from{opacity:0;transform:scale(.2)}to{opacity:1;transform:scale(1)}}
+.check-ring svg{width:28px;height:28px;stroke:var(--green-lt);stroke-width:1.5;fill:none}
+.code-tag{font-size:9px;letter-spacing:4px;text-transform:uppercase;color:var(--gold-dim);margin-bottom:10px}
+.code-sub{font-family:'Playfair Display',serif;font-size:18px;font-weight:300;font-style:italic;color:var(--muted);margin-bottom:32px;line-height:1.6}
+.digits{display:flex;gap:10px;justify-content:center;margin-bottom:10px}
+.digit{width:96px;height:116px;background:var(--card);border:1px solid var(--border);display:grid;place-items:center;font-family:'Playfair Display',serif;font-size:70px;font-weight:300;color:var(--gold);opacity:0;transform:translateY(14px) scale(.9);transition:all .5s cubic-bezier(.34,1.4,.64,1)}
+.digit.show{opacity:1;transform:translateY(0) scale(1)}
+.digit-hint{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--muted2);margin-bottom:28px}
+.capture-note{width:100%;background:rgba(122,98,48,.08);border:1px solid rgba(191,155,74,.2);padding:14px 16px;display:flex;gap:12px;text-align:left;margin-bottom:16px}
+.capture-ico{font-size:18px;flex-shrink:0;line-height:1.5}
+.capture-body strong{display:block;color:#D4AE62;font-weight:500;margin-bottom:3px;font-size:13px}
+.capture-body{font-size:13px;color:#C8A45C;line-height:1.65}
+.order-ref{font-size:9px;color:var(--border);letter-spacing:2px;text-transform:uppercase;margin-top:8px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Box Surprise</div>
+  <div class="ssl">🔒 Stripe · Sécurisé</div>
+</header>
+
+<!-- PAIEMENT -->
+<div class="scr on" id="scr-pay">
+  <div class="price-box">
+    <div class="price-label">Accès box</div>
+    <div class="price-amount">59 €</div>
+    <div class="price-desc">Box Surprise</div>
+  </div>
+  <div class="form-box">
+    <span class="fsection">Vos coordonnées</span>
+    <div class="field">
+      <label for="f-name">Nom complet</label>
+      <input id="f-name" type="text" placeholder="Jean Dupont" autocomplete="name"/>
+    </div>
+    <hr class="sep"/>
+    <span class="fsection">Carte bancaire</span>
+    <div class="field">
+      <label>Coordonnées bancaires</label>
+      <div id="card-el"></div>
+      <div id="card-err"></div>
+    </div>
+  </div>
+  <button class="pay-btn" id="pay-btn" onclick="pay()">Payer 59 € et recevoir le code</button>
+  <div class="secure">🔒 Paiement sécurisé par Stripe</div>
+</div>
+
+<!-- TRAITEMENT -->
+<div class="scr" id="scr-proc">
+  <div class="spinner"></div>
+  <div class="proc-title">Traitement en cours…</div>
+  <div class="proc-steps">
+    <div class="pstep" id="ps1"><div class="pstep-ico">💳</div>Validation du paiement</div>
+    <div class="pstep" id="ps2"><div class="pstep-ico">🔐</div>Génération du code</div>
+    <div class="pstep" id="ps3"><div class="pstep-ico">✅</div>Code prêt</div>
+  </div>
+</div>
+
+<!-- CODE -->
+<div class="scr" id="scr-code">
+  <div class="check-ring">
+    <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+  </div>
+  <div class="code-tag">Paiement validé</div>
+  <div class="code-sub">Entrez ce code sur<br>le clavier de la box</div>
+  <div class="digits">
+    <div class="digit" id="d0">7</div>
+    <div class="digit" id="d1">4</div>
+    <div class="digit" id="d2">2</div>
+  </div>
+  <div class="digit-hint">← Ces 3 chiffres →</div>
+  <div class="capture-note">
+    <div class="capture-ico">📸</div>
+    <div class="capture-body">
+      <strong>Prenez une capture d'écran</strong>
+      Ce code est à usage unique. Conservez-le pour ouvrir la box.
+    </div>
+  </div>
+  <div class="order-ref" id="order-ref"></div>
+</div>
+
+<script>
+/*
+  ⚙️  2 VALEURS À REMPLIR — RIEN D'AUTRE
+
+  STRIPE_PK   → dashboard.stripe.com → Développeurs → Clés API
+                Copiez la clé publiable (pk_test_... ou pk_live_...)
+
+  NETLIFY_URL → URL de votre site Netlify
+                Ex: https://joyful-fox-42.netlify.app
+*/
+var STRIPE_PK   = "pk_test_COLLEZ_VOTRE_CLE_ICI";
+var NETLIFY_URL = "https://VOTRE-SITE.netlify.app";
+
+/* ══ NE RIEN MODIFIER EN DESSOUS ══ */
+
+var stripe   = Stripe(STRIPE_PK);
+var elements = stripe.elements({ locale: "fr" });
+var card     = elements.create("card", {
+  style: {
+    base: {
+      fontFamily: "'Jost', sans-serif",
+      fontSize: "16px",
+      fontWeight: "300",
+      color: "#EAE0CC",
+      "::placeholder": { color: "#3A342C" },
+      iconColor: "#BF9B4A"
+    },
+    invalid: { color: "#A04040", iconColor: "#A04040" }
+  },
+  hidePostalCode: true
+});
+card.mount("#card-el");
+card.on("change", function(e) {
+  document.getElementById("card-err").textContent = e.error ? e.error.message : "";
+});
+
+var orderId  = "BOX-" + Math.random().toString(36).slice(2,7).toUpperCase();
+var animDone = false;
+var payDone  = false;
+
+function show(id) {
+  document.querySelectorAll(".scr").forEach(function(s) { s.classList.remove("on"); });
+  document.getElementById(id).classList.add("on");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+async function pay() {
+  var name = document.getElementById("f-name").value.trim();
+  if (!name) {
+    document.getElementById("card-err").textContent = "Entrez votre nom.";
+    return;
+  }
+  document.getElementById("card-err").textContent = "";
+  document.getElementById("pay-btn").disabled = true;
+  document.getElementById("pay-btn").textContent = "Préparation…";
+
+  try {
+    var res = await fetch(NETLIFY_URL + "/api/create-payment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ boxId: "box-surprise" })
+    });
+    if (!res.ok) {
+      var e = await res.json();
+      throw new Error(e.error || "Erreur serveur");
+    }
+    var data = await res.json();
+
+    show("scr-proc");
+    animDone = false;
+    payDone  = false;
+    startAnim();
+
+    var result = await stripe.confirmCardPayment(data.clientSecret, {
+      payment_method: { card: card, billing_details: { name: name } }
+    });
+
+    if (result.error) {
+      show("scr-pay");
+      document.getElementById("card-err").textContent    = result.error.message;
+      document.getElementById("pay-btn").disabled        = false;
+      document.getElementById("pay-btn").textContent     = "Réessayer";
+      return;
+    }
+
+    payDone = true;
+    if (animDone) showCode();
+
+  } catch(err) {
+    show("scr-pay");
+    document.getElementById("card-err").textContent = err.message;
+    document.getElementById("pay-btn").disabled     = false;
+    document.getElementById("pay-btn").textContent  = "Réessayer";
+  }
+}
+
+function startAnim() {
+  var ids = ["ps1","ps2","ps3"];
+  ids.forEach(function(id, i) {
+    setTimeout(function() {
+      if (i > 0) {
+        var p = document.getElementById(ids[i-1]);
+        p.classList.remove("live"); p.classList.add("done");
+        p.querySelector(".pstep-ico").textContent = "✓";
+      }
+      document.getElementById(id).classList.add("live");
+    }, i * 900);
+  });
+  setTimeout(function() {
+    var last = document.getElementById("ps3");
+    last.classList.remove("live"); last.classList.add("done");
+    last.querySelector(".pstep-ico").textContent = "✓";
+    animDone = true;
+    if (payDone) showCode();
+  }, 3000);
+}
+
+function showCode() {
+  document.getElementById("order-ref").textContent = "Réf. " + orderId;
+  show("scr-code");
+  setTimeout(function() {
+    ["d0","d1","d2"].forEach(function(id, i) {
+      setTimeout(function() {
+        document.getElementById(id).classList.add("show");
+      }, i * 200);
+    });
+  }, 100);
+}
+</script>
+</body>
+</html>

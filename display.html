@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Box Surprise — QR</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@300;400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;background:#080706;display:flex;align-items:center;justify-content:center;flex-direction:column;font-family:'Jost',sans-serif;padding:20px}
+.card{background:#100F0D;border:1px solid #1E1C18;padding:40px 36px;width:320px;text-align:center;position:relative}
+.card::before,.card::after,.cb::before,.cb::after{content:'';position:absolute;width:14px;height:14px;border-color:#6B5520;border-style:solid}
+.card::before{top:-2px;left:-2px;border-width:2px 0 0 2px}
+.card::after{top:-2px;right:-2px;border-width:2px 2px 0 0}
+.cb::before{bottom:-2px;left:-2px;border-width:0 0 2px 2px}
+.cb::after{bottom:-2px;right:-2px;border-width:0 2px 2px 0}
+.live-badge{display:inline-flex;align-items:center;gap:7px;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:#3A342C;margin-bottom:18px}
+.dot{width:6px;height:6px;background:#1A6B3C;border-radius:50%;animation:blink 2s ease infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.amount{font-family:'Playfair Display',serif;font-size:64px;font-weight:300;color:#BF9B4A;line-height:1;margin-bottom:6px}
+.desc{font-size:14px;color:#5C554A;margin-bottom:26px}
+.qr-frame{background:white;padding:14px;display:inline-block;margin-bottom:22px;position:relative}
+.qr-frame::before,.qr-frame::after,.qc::before,.qc::after{content:'';position:absolute;width:11px;height:11px;border-color:#BF9B4A;border-style:solid}
+.qr-frame::before{top:-3px;left:-3px;border-width:2px 0 0 2px}
+.qr-frame::after{top:-3px;right:-3px;border-width:2px 2px 0 0}
+.qc::before{bottom:-3px;left:-3px;border-width:0 0 2px 2px}
+.qc::after{bottom:-3px;right:-3px;border-width:0 2px 2px 0}
+.cta-title{display:block;color:#EAE0CC;font-size:14px;margin-bottom:4px}
+.cta-sub{font-size:12px;color:#3A342C;line-height:1.9}
+.admin{position:fixed;bottom:0;left:0;right:0;background:#0D0C0A;border-top:1px solid #1E1C18;padding:12px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.admin label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#3A342C;flex-shrink:0}
+.admin input{background:#161412;border:1px solid #242018;color:#EAE0CC;font-family:'Jost',sans-serif;font-size:13px;padding:7px 10px;outline:none;flex:1;min-width:220px;transition:border-color .2s}
+.admin input:focus{border-color:#BF9B4A}
+.admin input::placeholder{color:#2A2620}
+.gen-btn{background:#BF9B4A;color:#080706;border:none;font-family:'Jost',sans-serif;font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;padding:9px 20px;cursor:pointer;white-space:nowrap}
+.gen-btn:hover{opacity:.85}
+.ok{font-size:11px;color:#3CAF6A;display:none}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="cb"></div>
+  <div class="live-badge"><div class="dot"></div>Disponible</div>
+  <div class="amount">59 €</div>
+  <div class="desc">Box Surprise</div>
+  <div class="qr-frame">
+    <div class="qc"></div>
+    <div id="qr"></div>
+  </div>
+  <span class="cta-title">Scannez pour accéder à la box</span>
+  <span class="cta-sub">Appareil photo de votre téléphone<br>Paiement sécurisé Stripe</span>
+</div>
+
+<div class="admin">
+  <label>URL pay.html :</label>
+  <input id="url-in" type="text" placeholder="https://votre-site.netlify.app/pay.html"/>
+  <button class="gen-btn" onclick="gen()">⬡ Générer QR</button>
+  <span class="ok" id="ok">✓ QR prêt</span>
+</div>
+
+<script>
+function gen() {
+  var url = document.getElementById("url-in").value.trim();
+  if (!url) { alert("Collez l'URL complète de pay.html\nEx: https://joyful-fox-42.netlify.app/pay.html"); return; }
+  var c = document.getElementById("qr");
+  c.innerHTML = "";
+  new QRCode(c, { text: url, width: 200, height: 200, colorDark: "#080706", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H });
+  var ok = document.getElementById("ok");
+  ok.style.display = "inline";
+  setTimeout(function() { ok.style.display = "none"; }, 2500);
+  localStorage.setItem("pay_url", url);
+}
+window.onload = function() {
+  var s = localStorage.getItem("pay_url");
+  if (s) { document.getElementById("url-in").value = s; gen(); }
+};
+</script>
+</body>
+</html>
